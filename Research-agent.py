@@ -39,15 +39,15 @@ def parse_pubmed_xml(xml_data):
         articles.append(title)
     return articles
 
-def pubmed_tool_func(query: str, callback=None):
+def pubmed_tool_func(query: str, top_k_results=5, callback=None):
     try:
         result = fetch_pubmed_results(query)
-        parsed_result = parse_pubmed_xml(result)
+        parsed_result = parse_pubmed_xml(result)[:top_k_results]  # Limit results
         if callback:
             callback(parsed_result)
         return parsed_result
     except Exception as e:
-        return str(e)
+        return str(e) 
 
 pubmed_tool = Tool(
     name="PubMedQuery",
@@ -105,21 +105,20 @@ if prompt := st.chat_input("Search: "):
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
 
-    pubmed_tool.top_k_results = top_k_results
-    pubmed_tool.doc_content_chars_max = doc_content_chars_max
-
+    # Logging the settings
     logging.info(f"Top K Results: {top_k_results}, Max Characters: {doc_content_chars_max}")
 
+    # Initialize the search agent
     search_agent = initialize_agent(
         tools=tools,
         llm=llm,
         agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
         handle_parsing_errors=True
-    )  
+    )
 
     with st.chat_message("assistant"):
         st_cb = StreamlitCallbackHandler(st.container(), expand_new_thoughts=False)
         response = search_agent.run(st.session_state.messages, callbacks=[st_cb])
 
         st.session_state.messages.append({"role": "assistant", "content": response})
-        st.write(response)
+        st.write(response) 
